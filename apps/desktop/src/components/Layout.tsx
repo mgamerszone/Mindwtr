@@ -1,3 +1,4 @@
+import { ViewSidebarContext } from '../contexts/view-sidebar-context';
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import {
     Calendar,
@@ -141,6 +142,8 @@ export function Layout({
     ));
     const isCollapsed = userSidebarCollapsed || compactViewport;
     const calendarDragNavTimeoutRef = useRef<number | null>(null);
+    const [viewSidebarSlot, setViewSidebarSlot] = useState<HTMLDivElement | null>(null);
+    const hasViewSidebar = (contentView === 'projects' || contentView === 'contexts') && !isCollapsed;
     const isFocusMode = useUiStore((state) => state.isFocusMode);
     const hiddenSidebarViews = useUiStore((state) => state.hiddenSidebarViews);
     const showToast = useUiStore((state) => state.showToast);
@@ -786,6 +789,7 @@ export function Layout({
 
 
     return (
+        <ViewSidebarContext.Provider value={viewSidebarSlot}>
         <div className={cn(
             "flex h-screen overflow-hidden bg-background text-foreground",
             sandboxMode && "pt-10",
@@ -801,7 +805,7 @@ export function Layout({
             {!isFocusMode && (
                 <aside className={cn(
                     "border-r border-border bg-card flex flex-col",
-                    isCollapsed ? "w-16 p-2" : "w-64 px-3 pt-5 pb-3"
+                    isCollapsed ? "w-16 shrink-0 p-2" : "w-64 shrink-0 px-3 pt-5 pb-3"
                 )}>
                 <div className={cn(
                     "flex items-center gap-2 px-1.5 mb-6",
@@ -1003,6 +1007,7 @@ export function Layout({
                             );
                         })}
                     </nav>
+                    {hasViewSidebar && <div ref={setViewSidebarSlot} data-view-sidebar-slot className="mt-4 border-t border-border/60 pt-4" />}
                 </div>
 
                 <div className="mt-auto border-t border-border/60 px-2 py-1.5" data-sidebar-footer>
@@ -1124,7 +1129,7 @@ export function Layout({
                     // is skipped entirely by every view that overflows it. Each
                     // view puts LIST_END_GAP on its own scrolled content instead
                     // (#977).
-                    "mx-auto h-full px-4 pt-4 lg:px-6 lg:pt-6 2xl:px-8 2xl:pt-8",
+                    (contentView === 'projects' || contentView === 'contexts') ? "mx-auto h-full" : "mx-auto h-full px-4 pt-4 lg:px-6 lg:pt-6 2xl:px-8 2xl:pt-8",
                     isFocusMode
                         ? "max-w-[800px]"
                         : isFullWidthView
@@ -1169,5 +1174,6 @@ export function Layout({
             </main>
             <ToastHost />
         </div>
+        </ViewSidebarContext.Provider>
     );
 }
