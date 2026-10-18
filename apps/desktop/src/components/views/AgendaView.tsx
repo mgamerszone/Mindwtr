@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
 import {
     DndContext,
     DragOverlay,
@@ -278,14 +278,23 @@ function AgendaTaskList({
 }) {
     const [containerElement, setContainerElement] = useState<HTMLDivElement | null>(null);
     const [scrollMargin, setScrollMargin] = useState(0);
+    const editingTaskId = useUiStore((state) => state.editingTaskId);
     // Desktop views scroll inside the shared main content pane, not the window.
     const scrollElement = getAgendaScrollElement(containerElement);
     const shouldVirtualize = Boolean(scrollElement) && !highlightTaskId && tasks.length > AGENDA_VIRTUALIZATION_THRESHOLD;
+    const editingRowIndices = useMemo(() => (
+        editingTaskId ? tasks.flatMap((task, index) => task.id === editingTaskId ? [index] : []) : []
+    ), [editingTaskId, tasks]);
+    const rangeExtractor = useCallback((range: Range) => (
+        // Pin every occurrence in its own section/group so the draft owner survives scroll.
+        [...new Set([...defaultRangeExtractor(range), ...editingRowIndices])].sort((a, b) => a - b)
+    ), [editingRowIndices]);
     const rowVirtualizer = useVirtualizer({
         count: shouldVirtualize ? tasks.length : 0,
         getScrollElement: () => scrollElement,
         estimateSize: () => (showListDetails ? 96 : 82),
         overscan: 4,
+        rangeExtractor,
         scrollMargin,
         getItemKey: (index) => tasks[index]?.id ?? index,
     });
