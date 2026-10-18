@@ -20,6 +20,7 @@ import { SettingRow, SettingsCard, SettingsSectionHeader } from './settings/Sett
 export function SandboxSettingsView() {
     const { t } = useLanguage();
     const settings = useTaskStore((state) => state.settings);
+    const editorPresentation = settings.gtd?.taskEditor?.presentation;
     const updateSettings = useTaskStore((state) => state.updateSettings);
     const [error, setError] = useState<string | null>(null);
 
@@ -95,7 +96,7 @@ export function SandboxSettingsView() {
                             <select
                                 aria-label={t('settings.taskEditorPresentation')}
                                 className={selectClassName}
-                                value={settings.gtd?.taskEditor?.presentation === 'modal' ? 'modal' : 'inline'}
+                                value={editorPresentation === 'modal' || editorPresentation === 'side-panel' ? editorPresentation : 'inline'}
                                 onChange={(event) => void save({
                                     gtd: {
                                         ...(settings.gtd ?? {}),
