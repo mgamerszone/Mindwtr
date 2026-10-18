@@ -348,6 +348,19 @@ describe('TaskItem', () => {
         expect(getByDisplayValue('Unsaved panel draft')).toBeInTheDocument();
     });
 
+    it('returns focus to the task edit control after closing a side panel', async () => {
+        useTaskStore.setState({ settings: { gtd: { taskEditor: { presentation: 'side-panel' } } } });
+        const view = render(<LanguageProvider><TaskItem task={mockTask} /></LanguageProvider>);
+        const opener = view.getAllByRole('button', { name: /edit/i })[0];
+        opener.focus();
+        await userEvent.setup().keyboard('{Enter}');
+        const title = view.getByDisplayValue('Test Task');
+        expect(title).toHaveFocus();
+        fireEvent.keyDown(title, { key: 'Escape' });
+        expect(view.queryByRole('region', { name: /edit task/i })).toBeNull();
+        expect(view.container.querySelector('[data-task-edit-trigger]')).toHaveFocus();
+    });
+
     it('opens the editor in a modal when the setting uses pop-up presentation', async () => {
         act(() => {
             useTaskStore.setState({

@@ -1,5 +1,5 @@
 import React, { memo, useState, useMemo, useDeferredValue, useEffect, useRef, useCallback } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
 import { AlertTriangle, Check, ChevronDown, ChevronRight, HelpCircle, Sparkles } from 'lucide-react';
 import { buildProjectOrderMap,
     buildProjectViewSectionUpdate,
@@ -241,6 +241,7 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
         setFiltersOpen,
     } = useListFilterControls();
     const showToast = useUiStore((state) => state.showToast);
+    const editingTaskId = useUiStore((state) => state.editingTaskId);
     const resolveText = useCallback((key: string, fallback: string) => {
         return resolveI18nText(t, key, { fallback });
     }, [t]);
@@ -799,6 +800,16 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
     ), [areaById, handleOpenProject, handleReactivateProject, readOnly, t]);
     const virtualRowCount = groupedVirtualRows?.length ?? filteredTasks.length;
     const shouldVirtualize = virtualRowCount > LIST_VIRTUALIZATION_THRESHOLD;
+    const editingRowIndices = useMemo(() => {
+        if (!editingTaskId) return [];
+        return groupedVirtualRows
+            ? groupedVirtualRows.flatMap((row, index) => row.kind === 'task' && row.task.id === editingTaskId ? [index] : [])
+            : filteredTasks.flatMap((task, index) => task.id === editingTaskId ? [index] : []);
+    }, [editingTaskId, filteredTasks, groupedVirtualRows]);
+    const rangeExtractor = useCallback((range: Range) => (
+        // Keep the draft owner mounted outside overscan, including repeated tag/context rows.
+        [...new Set([...defaultRangeExtractor(range), ...editingRowIndices])].sort((a, b) => a - b)
+    ), [editingRowIndices]);
     const rowVirtualizer = useVirtualizer({
         count: shouldVirtualize ? virtualRowCount : 0,
         getScrollElement: () => listScrollRef.current,
@@ -812,6 +823,7 @@ export const ListView = memo(function ListView({ title, statusFilter }: ListView
                         : LIST_VIRTUAL_ROW_ESTIMATE
         ),
         overscan: LIST_VIRTUAL_OVERSCAN_ROWS,
+        rangeExtractor,
         getItemKey: (index) => {
             const row = groupedVirtualRows?.[index];
             if (!row) return filteredTasks[index]?.id ?? index;

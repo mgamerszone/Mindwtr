@@ -299,7 +299,7 @@ export function DailyReviewGuideModal({ onClose }: DailyReviewGuideModalProps) {
             <div className="divide-y divide-border/30">
                 {list.map((task) => (
                     <div key={task.id} className={cn(options?.showFollowUpToday && "py-2")}>
-                        <TaskItem task={task} showProjectBadgeInActions={false} />
+                        <TaskItem task={task} editorPresentation="inline" showProjectBadgeInActions={false} />
                         {options?.showFollowUpToday && (
                             <div className="mt-2 flex justify-end">
                                 <button

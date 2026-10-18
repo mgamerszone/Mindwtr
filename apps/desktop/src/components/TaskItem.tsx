@@ -201,6 +201,12 @@ export const TaskItem = memo(function TaskItem({
         [setProjectView]
     );
     const { t, language } = useLanguage();
+    const taskEditorPresentationSetting = settings?.gtd?.taskEditor?.presentation;
+    const resolvedEditorPresentation: TaskEditorPresentation = editorPresentation
+        ?? (taskEditorPresentationSetting === 'modal' || taskEditorPresentationSetting === 'side-panel' ? taskEditorPresentationSetting : 'inline');
+    const isModalEditor = resolvedEditorPresentation === 'modal';
+    const isSidePanelEditor = resolvedEditorPresentation === 'side-panel';
+    const isDetachedEditor = isModalEditor || isSidePanelEditor;
     const nativeDateInputLocale = useMemo(() => {
         const systemLocale = typeof navigator !== 'undefined'
             ? String(navigator.languages?.[0] || navigator.language || '').trim()
@@ -545,13 +551,14 @@ export const TaskItem = memo(function TaskItem({
         runAfterTaskEditExit(() => {
             if (!taskRootRef.current?.isConnected) return;
             if (!tryClaimTaskEditSession(task.id, editSessionOwnerRef.current)) return;
+            if (isDetachedEditor) lastFocusedBeforeModalRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
             resetEditState();
             setTaskExpanded(task.id, false);
             setAutoFocusTitle(true);
             setIsEditing(true);
             setEditingTaskId(task.id);
         });
-    }, [effectiveReadOnly, isEditing, resetEditState, setEditingTaskId, setTaskExpanded, task.id]);
+    }, [effectiveReadOnly, isEditing, isDetachedEditor, resetEditState, setEditingTaskId, setTaskExpanded, task.id]);
 
     const handleCreateProject = useCallback(async (title: string) => {
         const trimmed = title.trim();
@@ -757,11 +764,12 @@ export const TaskItem = memo(function TaskItem({
             // (Focus grouped by tags renders multi-tag tasks once per group);
             // opening a second editor makes them close each other on click.
             if (!tryClaimTaskEditSession(task.id, editSessionOwnerRef.current)) return;
+            if (isDetachedEditor) lastFocusedBeforeModalRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
             setTaskExpanded(task.id, false);
             setAutoFocusTitle(true);
             setIsEditing(true);
         }
-    }, [editingTaskId, effectiveReadOnly, isEditing, setTaskExpanded, task.id]);
+    }, [editingTaskId, effectiveReadOnly, isEditing, isDetachedEditor, setTaskExpanded, task.id]);
 
     useEffect(() => {
         if (!isEditing) return;
@@ -1394,22 +1402,18 @@ export const TaskItem = memo(function TaskItem({
             setIsSavingExit(false);
         }
     }, [finishEditorExit, handleSubmit, isSavingExit, showToast, t]);
-    const taskEditorPresentationSetting = settings?.gtd?.taskEditor?.presentation;
-    const resolvedEditorPresentation: TaskEditorPresentation = editorPresentation
-        ?? (taskEditorPresentationSetting === 'modal' || taskEditorPresentationSetting === 'side-panel' ? taskEditorPresentationSetting : 'inline');
-    const isModalEditor = resolvedEditorPresentation === 'modal';
-    const isSidePanelEditor = resolvedEditorPresentation === 'side-panel';
-    const isDetachedEditor = isModalEditor || isSidePanelEditor;
     useEffect(() => {
         if (!(isEditing && isDetachedEditor)) {
             if (lastFocusedBeforeModalRef.current) {
-                lastFocusedBeforeModalRef.current.focus();
+                const target = lastFocusedBeforeModalRef.current.isConnected
+                    ? lastFocusedBeforeModalRef.current
+                    : taskRootRef.current?.querySelector<HTMLElement>('[data-task-edit-trigger]');
+                target?.focus();
                 lastFocusedBeforeModalRef.current = null;
             }
             return;
         }
 
-        lastFocusedBeforeModalRef.current = document.activeElement as HTMLElement | null;
         const timer = setTimeout(() => {
             const active = document.activeElement as HTMLElement | null;
             if (active && modalEditorRef.current?.contains(active)) {
