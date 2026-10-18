@@ -6,7 +6,7 @@ import { SettingsGtdPage } from './SettingsGtdPage';
 import { useUiStore } from '../../../store/ui-store';
 
 describe('SettingsGtdPage', () => {
-    it('saves the task editor presentation setting', async () => {
+    it.each(['modal', 'side-panel'] as const)('saves the %s task editor presentation setting', async (presentation) => {
         const updateSettings = vi.fn().mockResolvedValue(undefined);
         const showSaved = vi.fn();
 
@@ -24,13 +24,13 @@ describe('SettingsGtdPage', () => {
 
         expect(queryByText('Temporary onboarding test')).not.toBeInTheDocument();
         fireEvent.click(getByRole('button', { name: /task editor layout/i }));
-        fireEvent.click(getByRole('button', { name: /pop-up/i }));
+        fireEvent.click(getByRole('button', { name: presentation === 'modal' ? /pop-up/i : /side panel/i }));
 
         await waitFor(() => {
             expect(updateSettings).toHaveBeenCalledWith({
                 gtd: {
                     taskEditor: {
-                        presentation: 'modal',
+                        presentation,
                     },
                 },
             });

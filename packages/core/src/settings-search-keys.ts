@@ -295,7 +295,7 @@ export const SETTINGS_SEARCH_MOBILE_EXCLUSIONS: Record<string, string> = {
     undoNotifications: 'Desktop-only preference; not present on mobile.',
     inboxDefaultMode: 'Mobile inbox processing has no guided/quick default-mode row.',
     inboxTwoMinuteFirst: 'Mobile inbox processing has no two-minute-rule ordering row.',
-    taskEditorPresentation: 'Desktop-only inline/modal task-editor choice; the mobile editor has one fixed presentation.',
+    taskEditorPresentation: 'Desktop-only inline/modal/side-panel task-editor choice; the mobile editor has one fixed presentation.',
     attachmentsCleanup: 'Desktop-only attachments cleanup section.',
     localApiServer: 'No local API server on mobile.',
     localApiPort: 'Part of the desktop-only local API server above.',

@@ -324,6 +324,30 @@ describe('TaskItem', () => {
         });
     });
 
+    it('honors the Calendar inline override when side panel is configured', async () => {
+        act(() => useTaskStore.setState({ settings: { gtd: { taskEditor: { presentation: 'side-panel' } } } }));
+        const { container, getAllByRole, getByDisplayValue, queryByRole } = render(<LanguageProvider><TaskItem task={mockTask} editorPresentation="inline" /></LanguageProvider>);
+        await act(async () => fireEvent.click(getAllByRole('button', { name: /edit/i })[0]));
+        expect(getByDisplayValue('Test Task')).toBeInTheDocument();
+        expect(container.querySelector('form')).toBeInTheDocument();
+        expect(queryByRole('region', { name: /edit task/i })).toBeNull();
+    });
+
+    it('keeps the row visible in a side panel and guards closing a dirty draft', async () => {
+        act(() => useTaskStore.setState({ settings: { gtd: { taskEditor: { presentation: 'side-panel' } } } }));
+        const { getAllByRole, getByRole, getByDisplayValue, queryByRole } = render(
+            <LanguageProvider><TaskItem task={mockTask} /></LanguageProvider>);
+        await act(async () => fireEvent.click(getAllByRole('button', { name: /edit/i })[0]));
+        const panel = getByRole('region', { name: /edit task/i });
+        expect(panel).toBeInTheDocument();
+        expect(queryByRole('dialog', { name: /edit task/i })).toBeNull();
+        expect(getByRole('button', { name: /toggle task details: test task/i })).toBeInTheDocument();
+        fireEvent.change(getByDisplayValue('Test Task'), { target: { value: 'Unsaved panel draft' } });
+        fireEvent.click(within(panel).getByRole('button', { name: 'Close' }));
+        expect(getByRole('dialog', { name: /unsaved changes/i })).toBeInTheDocument();
+        expect(getByDisplayValue('Unsaved panel draft')).toBeInTheDocument();
+    });
+
     it('opens the editor in a modal when the setting uses pop-up presentation', async () => {
         act(() => {
             useTaskStore.setState({

@@ -107,6 +107,7 @@ export function SandboxSettingsView() {
                                 }, 'editor-opening')}
                             >
                                 <option value="inline">{t('settings.taskEditorPresentationInline')}</option>
+                                <option value="side-panel">{t('settings.taskEditorPresentationSidePanel')}</option>
                                 <option value="modal">{t('settings.taskEditorPresentationModal')}</option>
                             </select>
                         </SettingRow>

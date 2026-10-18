@@ -149,6 +149,23 @@ const baseProps: Parameters<typeof TaskItemEditor>[0] = {
 };
 
 describe('TaskItemEditor', () => {
+    it('shows panel content once regardless of configured section and keeps hidden fields hidden', () => {
+        const { getAllByText, queryByText, getByRole } = render(<TaskItemEditor {...baseProps}
+            isSidePanelEditor
+            basicFieldsBeforeOrganizers={['status', 'dueDate']}
+            schedulingFields={['attachments', 'recurrence']}
+            organizationFields={['checklist', 'contexts']}
+            detailsFields={['description']}
+            sectionOpenDefaults={{ basic: true, scheduling: true, organization: true, details: true }} />);
+        for (const field of ['status', 'dueDate', 'description', 'checklist', 'attachments']) {
+            expect(getAllByText('field:' + field)).toHaveLength(1);
+            expect(getAllByText('field:' + field)[0].closest('details')).toBeNull();
+        }
+        expect(queryByText('field:tags')).toBeNull();
+        expect(getByRole('button', { name: 'Save' })).not.toBeDisabled();
+        expect(getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    });
+
     it.each([false, true])('keeps configured fields once and in reading order (modal: %s)', (isModalEditor) => {
         const { getByText, getAllByText, getByRole } = render(
             <TaskItemEditor

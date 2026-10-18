@@ -615,6 +615,7 @@ function AutocompleteTextField({
 }
 
 export function StatusField({
+    compact = false,
     t,
     value,
     onChange,
@@ -623,6 +624,7 @@ export function StatusField({
     t: (key: string) => string;
     value: TaskStatus;
     onChange: (value: TaskStatus) => void;
+    compact?: boolean;
     onRequestBackdatedComplete?: () => void;
 }) {
     const baseOptions: Array<{ value: TaskStatus; label: string }> = [
@@ -634,6 +636,17 @@ export function StatusField({
         { value: 'done', label: t('status.done') },
         { value: 'archived', label: t('status.archived') },
     ];
+    if (compact) return (
+        <label className="flex min-w-0 flex-col gap-1 text-xs text-muted-foreground">
+            {t('taskEdit.statusLabel')}
+            <select aria-label={t('task.aria.status')} value={value}
+                onChange={(event) => onChange(event.target.value as TaskStatus)}
+                onContextMenu={onRequestBackdatedComplete ? (event) => { event.preventDefault(); onRequestBackdatedComplete(); } : undefined}
+                className={cn('min-h-10 w-full rounded-md border border-border bg-background px-3 text-sm', STATUS_PILL_ACTIVE_CLASSES[value])}>
+                {baseOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+        </label>
+    );
     const options: Array<PillOption<TaskStatus>> = baseOptions.map((option) => {
         const StatusIcon = STATUS_OPTION_ICONS[option.value];
         return {

@@ -162,6 +162,8 @@ export const SETTINGS_LABEL_KEYS = [
     'taskEditorPresentationDesc',
     'taskEditorPresentationInline',
     'taskEditorPresentationInlineDesc',
+    'taskEditorPresentationSidePanel',
+    'taskEditorPresentationSidePanelDesc',
     'taskEditorPresentationModal',
     'taskEditorPresentationModalDesc',
     'taskEditorLayoutReset',

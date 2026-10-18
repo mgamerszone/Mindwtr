@@ -84,6 +84,8 @@ type Labels = {
     taskEditorPresentationDesc: string;
     taskEditorPresentationInline: string;
     taskEditorPresentationInlineDesc: string;
+    taskEditorPresentationSidePanel: string;
+    taskEditorPresentationSidePanelDesc: string;
     taskEditorPresentationModal: string;
     taskEditorPresentationModalDesc: string;
     taskEditorLayoutReset: string;
@@ -202,8 +204,8 @@ export function SettingsGtdPage({
     const hiddenSet = new Set(savedHidden);
     const taskEditorSections = getTaskEditorSectionAssignments(safeSettings.gtd?.taskEditor);
     const taskEditorSectionOpen = getTaskEditorSectionOpenDefaults(safeSettings.gtd?.taskEditor);
-    const taskEditorPresentation: TaskEditorPresentation = safeSettings.gtd?.taskEditor?.presentation === 'modal'
-        ? 'modal'
+    const taskEditorPresentation: TaskEditorPresentation = safeSettings.gtd?.taskEditor?.presentation === 'modal' || safeSettings.gtd?.taskEditor?.presentation === 'side-panel'
+        ? safeSettings.gtd.taskEditor.presentation
         : 'inline';
     const defaultCaptureMethod = safeSettings.gtd?.defaultCaptureMethod ?? 'text';
     const defaultAreaMode = getDefaultTaskAreaMode(safeSettings);
@@ -974,7 +976,7 @@ export function SettingsGtdPage({
                         description={t.taskEditorPresentationDesc}
                         className="rounded-md border border-border bg-muted/20 p-3 gap-3"
                     >
-                        <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="grid gap-2 sm:grid-cols-3">
                             {([
                                 {
                                     value: 'inline',
@@ -985,6 +987,11 @@ export function SettingsGtdPage({
                                     value: 'modal',
                                     label: t.taskEditorPresentationModal,
                                     description: t.taskEditorPresentationModalDesc,
+                                },
+                                {
+                                    value: 'side-panel',
+                                    label: t.taskEditorPresentationSidePanel,
+                                    description: t.taskEditorPresentationSidePanelDesc,
                                 },
                             ] as const).map((option) => {
                                 const selected = taskEditorPresentation === option.value;
