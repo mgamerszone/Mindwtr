@@ -39,6 +39,8 @@ interface TaskItemEditorProps {
     setField: TaskDraftSetter;
     autoFocusTitle?: boolean;
     isModalEditor?: boolean;
+    isSidePanelEditor?: boolean;
+    hasUnsavedChanges?: boolean;
     // One seam for the whole AI feature: the editor forwards it to the menu
     // and panel components and otherwise knows nothing about AI.
     ai: ReturnType<typeof useTaskItemAi>;
@@ -111,6 +113,8 @@ export function TaskItemEditor({
     setField,
     autoFocusTitle = false,
     isModalEditor = false,
+    isSidePanelEditor = false,
+    hasUnsavedChanges = false,
     ai,
     timeEstimatesEnabled,
     projects,
@@ -122,11 +126,11 @@ export function TaskItemEditor({
     onCreateSection,
     onCreateSomedaySection,
     organizerFields,
-    basicFieldsBeforeOrganizers,
-    basicFieldsAfterOrganizers,
-    schedulingFields,
-    organizationFields,
-    detailsFields,
+    basicFieldsBeforeOrganizers: configuredBasicFieldsBeforeOrganizers,
+    basicFieldsAfterOrganizers: configuredBasicFieldsAfterOrganizers,
+    schedulingFields: configuredSchedulingFields,
+    organizationFields: configuredOrganizationFields,
+    detailsFields: configuredDetailsFields,
     sectionCounts,
     sectionOpenDefaults,
     renderField,
@@ -173,6 +177,14 @@ export function TaskItemEditor({
         'You can customize which fields appear here in Settings -> GTD -> Task Editor Layout.'
     );
     const [editorLayoutHelpOpen, setEditorLayoutHelpOpen] = useState(false);
+
+    const primaryFields: TaskEditorFieldId[] = isSidePanelEditor ? ['status', 'dueDate', 'description', 'checklist', 'attachments'] : [];
+    const configuredFields = [...configuredBasicFieldsBeforeOrganizers, ...configuredBasicFieldsAfterOrganizers, ...configuredSchedulingFields, ...configuredOrganizationFields, ...configuredDetailsFields];
+    const basicFieldsBeforeOrganizers = configuredBasicFieldsBeforeOrganizers.filter((id) => !primaryFields.includes(id));
+    const basicFieldsAfterOrganizers = configuredBasicFieldsAfterOrganizers.filter((id) => !primaryFields.includes(id));
+    const schedulingFields = configuredSchedulingFields.filter((id) => !primaryFields.includes(id));
+    const organizationFields = configuredOrganizationFields.filter((id) => !primaryFields.includes(id));
+    const detailsFields = configuredDetailsFields.filter((id) => !primaryFields.includes(id));
 
     const showProjectDestination = organizerFields.includes('project');
     const showAreaDestination = organizerFields.includes('area');
@@ -226,7 +238,7 @@ export function TaskItemEditor({
         if (attachmentsSection === 'scheduling') setSchedulingOpen(true);
         else if (attachmentsSection === 'organization') setOrganizationOpen(true);
         else if (attachmentsSection === 'details') setDetailsOpen(true);
-        if (attachmentsSection) setRevealAttachmentsToken((prev) => prev + 1);
+        if (attachmentsSection || isSidePanelEditor) setRevealAttachmentsToken((prev) => prev + 1);
     };
 
     // Expanding a section and scrolling to it in the same tick scrolls to a
@@ -283,6 +295,10 @@ export function TaskItemEditor({
         return false;
     };
 
+    const renderPrimaryField = (fieldId: TaskEditorFieldId) => configuredFields.includes(fieldId) && (
+        <div key={fieldId} ref={fieldId === 'attachments' ? attachmentsFieldRef : undefined} className="min-w-0">{renderField(fieldId)}</div>
+    );
+
     const detailsSection = detailsFields.length > 0 && (
         <div className="min-w-0">
             <TaskEditorSection
@@ -298,110 +314,20 @@ export function TaskItemEditor({
         </div>
     );
 
-    return (
-        <form
-            data-popup={isModalEditor || undefined}
-            onSubmit={(event) => {
-                if (isImportingFiles) { event.preventDefault(); return; }
-                onSubmit(event);
-            }}
-            onKeyDown={(event) => {
-                if (event.key === 'Escape') {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onCancel();
-                    return;
-                }
-                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    const form = event.currentTarget as HTMLFormElement;
-                    if (typeof form.requestSubmit === 'function') {
-                        form.requestSubmit();
-                    } else {
-                        if (!isImportingFiles) onSubmit(event as unknown as FormEvent);
-                    }
-                }
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-            onDragOver={handleFormDragOver}
-            onDragLeave={handleFormDragLeave}
-            onDrop={handleFormDrop}
-            className={cn(
-                'group/task-editor flex flex-col gap-3',
-                isModalEditor ? 'max-h-[calc(90vh-3rem)]' : 'max-h-[80vh]',
-                isFileDragOver && 'ring-2 ring-primary/50',
-            )}
-        >
-            <div className="flex-1 min-h-0 overflow-y-auto pr-1 pl-1 -ml-1 pt-1 -mt-1 pb-1 -mb-1 space-y-3">
-                <div className="flex items-start gap-3 pt-0.5">
-                    {onMarkDone && (
-                        <button
-                            type="button"
-                            onClick={onMarkDone}
-                            onContextMenu={onRequestBackdatedComplete ? (event) => {
-                                event.preventDefault();
-                                event.stopPropagation();
-                                onRequestBackdatedComplete();
-                            } : undefined}
-                            aria-label={t('status.done')}
-                            aria-pressed={isDoneActionActive}
-                            title={onRequestBackdatedComplete
-                                ? tFallback(t, 'task.completeBackdateHint', 'Right-click to complete with a different time')
-                                : t('status.done')}
-                            className={cn(
-                                'mt-0.5 inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-card motion-reduce:transition-none',
-                                isDoneActionActive
-                                    ? 'border-success bg-success text-success-foreground shadow-sm'
-                                    : 'border-border bg-muted/30 text-muted-foreground hover:border-success/50 hover:bg-success/10 hover:text-success'
-                            )}
+    const schedulingSection = (schedulingFields.length > 0 && (
+                        <TaskEditorSection
+                            title={t('taskEdit.scheduling')}
+                            count={sectionCounts.scheduling}
+                            open={schedulingOpen}
+                            onToggle={() => setSchedulingOpen((prev) => !prev)}
                         >
-                            <Check className="h-4 w-4" aria-hidden="true" />
-                        </button>
-                    )}
-                    <TaskInput
-                        autoFocus={autoFocusTitle}
-                        value={editTitle}
-                        onChange={(value) => {
-                            setEditTitle(value);
-                            resetCopilotDraft();
-                        }}
-                        projects={projects}
-                        contexts={inputContexts}
-                        people={inputPeople}
-                        areas={areas}
-                        onCreateProject={onCreateProject}
-                        onAcceptSuggestion={handleTitleSuggestionAccept}
-                        placeholder={t('taskEdit.titleLabel')}
-                        ariaLabel={t('taskEdit.titleLabel')}
-                        className={cn(
-                            'w-full rounded-sm bg-transparent border-b border-primary/60 px-1 pb-1.5 pt-0 font-semibold text-foreground placeholder:text-muted-foreground transition-colors focus:border-primary focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1 focus-visible:ring-offset-card outline-none motion-reduce:transition-none',
-                            isModalEditor ? 'text-2xl leading-9 border-transparent hover:border-border' : 'text-lg leading-7',
-                        )}
-                        containerClassName="flex-1 min-w-0"
-                        dir={titleDirection}
-                    />
-                    {focusStar && (
-                        <button
-                            type="button"
-                            onClick={focusStar.onToggle}
-                            aria-label={focusStar.title}
-                            aria-pressed={focusStar.isFocused}
-                            title={focusStar.title}
-                            className={cn(
-                                'p-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40',
-                                focusStar.isFocused
-                                    ? 'text-warning hover:bg-warning/10'
-                                    : 'text-muted-foreground hover:text-warning hover:bg-muted/60',
-                            )}
-                        >
-                            <FocusStarIcon filled={focusStar.isFocused} className="w-4 h-4" />
-                        </button>
-                    )}
-                    <TaskEditorAiMenu ai={ai} t={t} />
-                </div>
-            <TaskEditorAiPanels ai={ai} timeEstimatesEnabled={timeEstimatesEnabled} t={t} />
+                            {schedulingFields.map((fieldId) => (
+                                <div key={fieldId} ref={fieldId === 'attachments' ? attachmentsFieldRef : undefined}>{renderField(fieldId)}</div>
+                            ))}
+                        </TaskEditorSection>
+                    ));
+
+    const properties = (<>
             <div className={cn(
                 'flex flex-col gap-3',
                 isModalEditor && detailsFields.length > 0 && 'lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-6',
@@ -508,18 +434,7 @@ export function TaskItemEditor({
                     <ContextualHelp topic={schedulingOpen && schedulingFields.length > 0 ? 'scheduling' : 'details'} t={t} />
                 )}
                 <div>
-                    {schedulingFields.length > 0 && (
-                        <TaskEditorSection
-                            title={t('taskEdit.scheduling')}
-                            count={sectionCounts.scheduling}
-                            open={schedulingOpen}
-                            onToggle={() => setSchedulingOpen((prev) => !prev)}
-                        >
-                            {schedulingFields.map((fieldId) => (
-                                <div key={fieldId} ref={fieldId === 'attachments' ? attachmentsFieldRef : undefined}>{renderField(fieldId)}</div>
-                            ))}
-                        </TaskEditorSection>
-                    )}
+                    {!isSidePanelEditor && schedulingSection}
                     {organizationFields.length > 0 && (
                         <TaskEditorSection
                             title={t('taskEdit.organization')}
@@ -537,11 +452,10 @@ export function TaskItemEditor({
             </div>
             {!isModalEditor && detailsSection}
             </div>
-            </div>
-            <div className={cn(
-                'flex shrink-0 flex-wrap items-center gap-2',
-                isModalEditor ? 'border-t border-border pt-4' : 'pt-1',
-            )}>
+
+    </>);
+
+    const secondaryActions = (<>
                 <div className="relative">
                     <button
                         type="button"
@@ -602,13 +516,140 @@ export function TaskItemEditor({
                         {t('common.delete')}
                     </button>
                 )}
-                <div className="flex flex-wrap gap-2 ml-auto">
+
+    </>);
+
+    return (
+        <form
+            data-popup={isModalEditor || isSidePanelEditor || undefined}
+            onSubmit={(event) => {
+                if (isImportingFiles) { event.preventDefault(); return; }
+                onSubmit(event);
+            }}
+            onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onCancel();
+                    return;
+                }
+                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const form = event.currentTarget as HTMLFormElement;
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit();
+                    } else {
+                        if (!isImportingFiles) onSubmit(event as unknown as FormEvent);
+                    }
+                }
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onDragOver={handleFormDragOver}
+            onDragLeave={handleFormDragLeave}
+            onDrop={handleFormDrop}
+            className={cn(
+                'group/task-editor flex flex-col gap-3',
+                isSidePanelEditor ? 'flex-1 min-h-0' : isModalEditor ? 'max-h-[calc(90vh-3rem)]' : 'max-h-[80vh]',
+                isFileDragOver && 'ring-2 ring-primary/50',
+            )}
+        >
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1 pl-1 -ml-1 pt-1 -mt-1 pb-1 -mb-1 space-y-3">
+                <div className="flex items-start gap-3 pt-0.5">
+                    {onMarkDone && (
+                        <button
+                            type="button"
+                            onClick={onMarkDone}
+                            onContextMenu={onRequestBackdatedComplete ? (event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                onRequestBackdatedComplete();
+                            } : undefined}
+                            aria-label={t('status.done')}
+                            aria-pressed={isDoneActionActive}
+                            title={onRequestBackdatedComplete
+                                ? tFallback(t, 'task.completeBackdateHint', 'Right-click to complete with a different time')
+                                : t('status.done')}
+                            className={cn(
+                                'mt-0.5 inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-card motion-reduce:transition-none',
+                                isDoneActionActive
+                                    ? 'border-success bg-success text-success-foreground shadow-sm'
+                                    : 'border-border bg-muted/30 text-muted-foreground hover:border-success/50 hover:bg-success/10 hover:text-success'
+                            )}
+                        >
+                            <Check className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                    )}
+                    <TaskInput
+                        multiline={isSidePanelEditor}
+                        autoFocus={autoFocusTitle}
+                        value={editTitle}
+                        onChange={(value) => {
+                            setEditTitle(value);
+                            resetCopilotDraft();
+                        }}
+                        projects={projects}
+                        contexts={inputContexts}
+                        people={inputPeople}
+                        areas={areas}
+                        onCreateProject={onCreateProject}
+                        onAcceptSuggestion={handleTitleSuggestionAccept}
+                        placeholder={t('taskEdit.titleLabel')}
+                        ariaLabel={t('taskEdit.titleLabel')}
+                        className={cn(
+                            'w-full resize-none rounded-sm bg-transparent border-b border-primary/60 px-1 pb-1.5 pt-0 font-semibold text-foreground placeholder:text-muted-foreground transition-colors focus:border-primary focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1 focus-visible:ring-offset-card outline-none motion-reduce:transition-none',
+                            isModalEditor || isSidePanelEditor ? 'text-2xl leading-9 border-transparent hover:border-border' : 'text-lg leading-7',
+                        )}
+                        containerClassName="flex-1 min-w-0"
+                        dir={titleDirection}
+                    />
+                    {focusStar && (
+                        <button
+                            type="button"
+                            onClick={focusStar.onToggle}
+                            aria-label={focusStar.title}
+                            aria-pressed={focusStar.isFocused}
+                            title={focusStar.title}
+                            className={cn(
+                                'p-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-primary/40',
+                                focusStar.isFocused
+                                    ? 'text-warning hover:bg-warning/10'
+                                    : 'text-muted-foreground hover:text-warning hover:bg-muted/60',
+                            )}
+                        >
+                            <FocusStarIcon filled={focusStar.isFocused} className="w-4 h-4" />
+                        </button>
+                    )}
+                    <TaskEditorAiMenu ai={ai} t={t} />
+                </div>
+            <TaskEditorAiPanels ai={ai} timeEstimatesEnabled={timeEstimatesEnabled} t={t} />
+            {isSidePanelEditor && <>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{(['status', 'dueDate'] as const).map(renderPrimaryField)}</div>
+                <div className="space-y-6 py-4">{(['description', 'checklist', 'attachments'] as const).map(renderPrimaryField)}</div>
+            </>}
+            {isSidePanelEditor ? <details className="border-t border-border pt-4">
+                <summary className="cursor-pointer text-sm font-medium">{t('taskEdit.properties')}</summary>
+                <div className="pt-4">
+                    {properties}
+                    <div className="flex flex-wrap gap-2 pt-4">{secondaryActions}</div>
+                </div>
+            </details> : properties}
+            {isSidePanelEditor && schedulingSection}
+            </div>
+            <div className={cn(
+                'flex shrink-0 flex-wrap items-center gap-2',
+                isModalEditor || isSidePanelEditor ? 'border-t border-border pt-4' : 'pt-1',
+            )}>
+                {isSidePanelEditor && hasUnsavedChanges && <span role="status" className="text-xs text-muted-foreground">{t('taskEdit.unsavedChanges')}</span>}
+                {!isSidePanelEditor && secondaryActions}
+                <div className={cn("flex flex-wrap gap-2 ml-auto", isSidePanelEditor && "flex-row-reverse")}>
                     <button
                         type="submit"
                         disabled={isImportingFiles}
                         className={cn(
                             'bg-primary text-primary-foreground hover:bg-primary/90',
-                            isModalEditor ? 'min-h-10 rounded-md px-4 py-2 text-sm' : 'rounded px-3 py-1.5 text-xs',
+                            isModalEditor || isSidePanelEditor ? 'min-h-10 rounded-md px-4 py-2 text-sm' : 'rounded px-3 py-1.5 text-xs',
                         )}
                     >
                         {t('common.save')}
@@ -618,7 +659,7 @@ export function TaskItemEditor({
                         onClick={onCancel}
                         className={cn(
                             'bg-muted text-muted-foreground hover:bg-muted/80',
-                            isModalEditor ? 'min-h-10 rounded-md px-4 py-2 text-sm' : 'rounded px-3 py-1.5 text-xs',
+                            isModalEditor || isSidePanelEditor ? 'min-h-10 rounded-md px-4 py-2 text-sm' : 'rounded px-3 py-1.5 text-xs',
                         )}
                     >
                         {t('common.cancel')}

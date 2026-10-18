@@ -1,8 +1,8 @@
-import { render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { TIME_ESTIMATE_OPTIONS } from '@mindwtr/core';
 
-import { TimeEstimateField } from './TaskMetadataFields';
+import { StatusField, TimeEstimateField } from './TaskMetadataFields';
 
 // The editor once hard-coded its nine <option> tags with English labels. It now
 // renders core's list, so a value added there shows up here without an edit, and
@@ -41,5 +41,20 @@ describe('TimeEstimateField', () => {
         const select = getByLabelText('Time estimate') as HTMLSelectElement;
         expect(select.value).toBe('__custom');
         expect([...select.options].map((option) => option.value)).not.toContain('custom:75');
+    });
+});
+
+
+describe('Compact status editor', () => {
+    it('keeps every status and the backdated completion action', () => {
+        const onChange = vi.fn();
+        const onRequestBackdatedComplete = vi.fn();
+        const { getByRole } = render(<StatusField t={t} compact value="next" onChange={onChange} onRequestBackdatedComplete={onRequestBackdatedComplete} />);
+        const select = getByRole('combobox') as HTMLSelectElement;
+        expect([...select.options].map((option) => option.value)).toEqual(['inbox', 'next', 'waiting', 'someday', 'reference', 'done', 'archived']);
+        fireEvent.change(select, { target: { value: 'waiting' } });
+        expect(onChange).toHaveBeenCalledWith('waiting');
+        fireEvent.contextMenu(select);
+        expect(onRequestBackdatedComplete).toHaveBeenCalledOnce();
     });
 });

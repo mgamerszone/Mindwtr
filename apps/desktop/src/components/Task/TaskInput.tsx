@@ -1,6 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { ClipboardEventHandler, KeyboardEventHandler, RefObject } from 'react';
+import type { ChangeEvent, ClipboardEvent, ClipboardEventHandler, KeyboardEvent, KeyboardEventHandler, MouseEvent, RefObject, SyntheticEvent } from 'react';
 import { getTaskContextMatches, resolveFeatureFlags, useTaskStore, type Area, type Project, type TaskPriority } from '@mindwtr/core';
+import { AutosizeTextarea } from '../ui/AutosizeTextarea';
 import { cn } from '../../lib/utils';
 import {
     compareAutocompleteLabels,
@@ -9,6 +10,8 @@ import {
 } from './token-autocomplete';
 import { PriorityFlag } from './PriorityFlag';
 import { Sparkles } from 'lucide-react';
+
+type InputElement = HTMLInputElement | HTMLTextAreaElement;
 
 type TriggerType = 'project' | 'context' | 'tag' | 'area' | 'person' | 'command';
 type SlashCommand =
@@ -51,7 +54,8 @@ type Option =
 // measure the caret's pixel offset and adjust scrollLeft ourselves (LTR only).
 let caretMeasureContext: CanvasRenderingContext2D | null | undefined;
 
-const ensureCaretVisible = (input: HTMLInputElement, caret: number) => {
+const ensureCaretVisible = (input: InputElement, caret: number) => {
+    if (input instanceof HTMLTextAreaElement) return;
     if (typeof window === 'undefined') return;
     const style = window.getComputedStyle(input);
     if (style.direction === 'rtl') return;
@@ -97,6 +101,7 @@ interface TaskInputProps {
     className?: string;
     containerClassName?: string;
     autoFocus?: boolean;
+    multiline?: boolean;
     inputRef?: RefObject<HTMLInputElement | null>;
     onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
     onPaste?: ClipboardEventHandler<HTMLInputElement>;
@@ -270,14 +275,15 @@ export function TaskInput({
     className,
     containerClassName,
     autoFocus,
+    multiline = false,
     inputRef,
     onKeyDown,
     onPaste,
     dir,
     ariaLabel,
 }: TaskInputProps) {
-    const localRef = useRef<HTMLInputElement>(null);
-    const mergedRef = inputRef ?? localRef;
+    const localRef = useRef<InputElement>(null);
+    const mergedRef = multiline ? localRef : inputRef ?? localRef;
     const listboxId = useId();
     const [trigger, setTrigger] = useState<TriggerState | null>(null);
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -380,14 +386,14 @@ export function TaskInput({
             : nextUndoEntries;
     };
 
-    const updateSelection = (input: HTMLInputElement) => {
+    const updateSelection = (input: InputElement) => {
         selectionRef.current = {
             start: input.selectionStart ?? input.value.length,
             end: input.selectionEnd ?? input.value.length,
         };
     };
 
-    const resolveInputSelection = (input: HTMLInputElement | null): InputSelection => {
+    const resolveInputSelection = (input: InputElement | null): InputSelection => {
         if (!input) return selectionRef.current;
         const selection = {
             start: input.selectionStart ?? input.value.length,
@@ -552,7 +558,7 @@ export function TaskInput({
         scheduleSelectionRestore({ start: caret, end: caret });
     };
 
-    const handleKeyDown: KeyboardEventHandler<HTMLInputElement> = async (event) => {
+    const handleKeyDown: KeyboardEventHandler<InputElement> = async (event) => {
         const lowerKey = event.key.toLowerCase();
         if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && lowerKey === 'z') {
             const previousEntry = undoRef.current[undoRef.current.length - 1];
@@ -567,7 +573,7 @@ export function TaskInput({
             }
         }
         if (event.nativeEvent.isComposing || event.key === 'Process') {
-            onKeyDown?.(event);
+            onKeyDown?.(event as KeyboardEvent<HTMLInputElement>);
             return;
         }
         if (trigger && options.length > 0) {
@@ -603,7 +609,7 @@ export function TaskInput({
                 return;
             }
         }
-        onKeyDown?.(event);
+        onKeyDown?.(event as KeyboardEvent<HTMLInputElement>);
     };
 
     const hasOptions = trigger && options.length > 0;
@@ -617,14 +623,19 @@ export function TaskInput({
         }
     }, [activeDescendantId]);
 
+    const Input = multiline ? AutosizeTextarea : 'input';
     return (
         <div className={cn('relative', containerClassName)}>
-            <input
+            <Input
+                {...(multiline ? { minHeight: 44, maxHeight: 180, rows: 1 } : {})}
                 id={id}
-                ref={mergedRef}
+                ref={(node: InputElement | null) => {
+                    localRef.current = node;
+                    if (inputRef && !multiline) inputRef.current = node as HTMLInputElement | null;
+                }}
                 value={value}
                 autoFocus={autoFocus}
-                onChange={(event) => {
+                onChange={(event: ChangeEvent<InputElement>) => {
                     const text = event.target.value;
                     if (text !== valueRef.current) {
                         pushUndoEntry(valueRef.current, selectionRef.current);
@@ -635,16 +646,16 @@ export function TaskInput({
                     updateTrigger(text, event.target.selectionStart ?? text.length);
                 }}
                 onKeyDown={handleKeyDown}
-                onPaste={onPaste}
-                onClick={(event) => {
-                    const target = event.target as HTMLInputElement;
+                onPaste={(event: ClipboardEvent<InputElement>) => onPaste?.(event as ClipboardEvent<HTMLInputElement>)}
+                onClick={(event: MouseEvent<InputElement>) => {
+                    const target = event.currentTarget;
                     updateSelection(target);
                     updateTrigger(target.value, target.selectionStart ?? target.value.length);
                 }}
-                onSelect={(event) => {
+                onSelect={(event: SyntheticEvent<InputElement>) => {
                     updateSelection(event.currentTarget);
                 }}
-                onKeyUp={(event) => {
+                onKeyUp={(event: KeyboardEvent<InputElement>) => {
                     if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape', 'Tab'].includes(event.key)) return;
                     const target = event.currentTarget;
                     updateSelection(target);

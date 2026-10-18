@@ -13,6 +13,29 @@ import { expectScrolledEndGap } from '../../test/list-end-gap';
 
 const reportErrorMock = vi.hoisted(() => vi.fn());
 const selectionInputs = vi.hoisted(() => ({ scrollCallbacks: [] as unknown[] }));
+const virtualScroll = vi.hoisted(() => ({
+  enabled: false,
+  onOffset: null as ((offset: number, isScrolling: boolean) => void) | null,
+}));
+
+vi.mock('@tanstack/react-virtual', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-virtual')>();
+  return {
+    ...actual,
+    useVirtualizer: (options: Parameters<typeof actual.useVirtualizer>[0]) => actual.useVirtualizer({
+      ...options,
+      ...(virtualScroll.enabled ? {
+        observeElementRect: (_instance, callback) => { callback({ width: 1440, height: 600 }); },
+        observeElementOffset: (_instance, callback) => {
+          virtualScroll.onOffset = callback;
+          callback(0, false);
+        },
+        measureElement: () => 120,
+        scrollToFn: () => {},
+      } satisfies Partial<typeof options> : {}),
+    }),
+  };
+});
 
 vi.mock('./list/useListSelection', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./list/useListSelection')>();
@@ -20,7 +43,9 @@ vi.mock('./list/useListSelection', async (importOriginal) => {
     ...actual,
     useListSelection: (options: Parameters<typeof actual.useListSelection>[0]) => {
       selectionInputs.scrollCallbacks.push(options.scrollToVirtualIndex);
-      return actual.useListSelection(options);
+      return actual.useListSelection(virtualScroll.enabled
+        ? { ...options, scrollToVirtualIndex: () => {} }
+        : options);
     },
   };
 });
@@ -164,6 +189,8 @@ describe('ListView', () => {
   });
 
   beforeEach(() => {
+    virtualScroll.enabled = false;
+    virtualScroll.onOffset = null;
     selectionInputs.scrollCallbacks = [];
     reportErrorMock.mockReset();
     window.localStorage.removeItem(referenceViewStateStorageKey);
@@ -1105,6 +1132,45 @@ describe('ListView', () => {
     const { getByTestId } = renderListView('reference', 'Reference');
 
     expect(getByTestId('virtualized-task-list')).toHaveAttribute('data-grouped', 'true');
+  });
+
+  it.each([
+    { groupBy: 'none', editOffset: 0, awayOffset: 6000 },
+    { groupBy: 'context', editOffset: 0, awayOffset: 6000 },
+    { groupBy: 'tag', editOffset: 7250, awayOffset: 13000 },
+  ] as const)('retains a dirty editor across virtual ranges ($groupBy)', ({ groupBy, editOffset, awayOffset }) => {
+    virtualScroll.enabled = true;
+    const tasks = Array.from({ length: 60 }, (_, index) => makeTask(`draft-${index}`, {
+      order: index,
+      contexts: ['@home'],
+      tags: ['#alpha', '#beta'],
+    }));
+    useTaskStore.setState({
+      _allTasks: tasks,
+      lastDataChangeAt: 1,
+      settings: { gtd: { taskEditor: { presentation: 'side-panel' } } },
+    });
+    useUiStore.setState((state) => ({ listOptions: { ...state.listOptions, nextGroupBy: groupBy } }));
+    const view = renderListView();
+    act(() => virtualScroll.onOffset!(editOffset, false));
+    const row = view.getByText('Task draft-0').closest('[data-task-id]')!;
+    const neighbor = view.getByText('Task draft-1').closest('[data-task-id]')!;
+    fireEvent.doubleClick(row);
+    const editor = view.getByDisplayValue('Task draft-0');
+    fireEvent.change(editor, { target: { value: 'Unsaved virtual draft' } });
+
+    act(() => virtualScroll.onOffset!(awayOffset, false));
+    expect(neighbor).not.toBeInTheDocument();
+    expect(row).toBeInTheDocument();
+    expect(view.getByDisplayValue('Unsaved virtual draft')).toBe(editor);
+    expect(useUiStore.getState().editingTaskId).toBe('draft-0');
+    expect(useTaskStore.getState().tasks.find((task) => task.id === 'draft-0')?.title).toBe('Task draft-0');
+
+    act(() => virtualScroll.onOffset!(editOffset, false));
+    expect(view.getByDisplayValue('Unsaved virtual draft')).toBe(editor);
+    act(() => virtualScroll.onOffset!(awayOffset, false));
+    act(() => useUiStore.setState({ editingTaskId: null }));
+    expect(row).not.toBeInTheDocument();
   });
 
   it('groups reference tasks by each tag when tag grouping is selected', () => {

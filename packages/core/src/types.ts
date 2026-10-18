@@ -72,7 +72,7 @@ export type TaskEditorFieldId =
     | 'checklist';
 
 export type TaskEditorSectionId = 'basic' | 'scheduling' | 'organization' | 'details';
-export type TaskEditorPresentation = 'inline' | 'modal';
+export type TaskEditorPresentation = 'inline' | 'modal' | 'side-panel';
 
 export type InboxProcessingMode = 'guided' | 'quick';
 

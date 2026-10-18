@@ -39,10 +39,11 @@ function TaskInputHarness({
 }
 
 describe('TaskInput autocomplete', () => {
-    it('suggests custom contexts for @ trigger', () => {
+    it.each([false, true])('suggests contexts with multiline=%s', (multiline) => {
         const onChange = vi.fn();
         const { getByRole } = render(
             <TaskInput
+                multiline={multiline}
                 value="@per"
                 onChange={onChange}
                 projects={[]}

@@ -201,6 +201,12 @@ export const TaskItem = memo(function TaskItem({
         [setProjectView]
     );
     const { t, language } = useLanguage();
+    const taskEditorPresentationSetting = settings?.gtd?.taskEditor?.presentation;
+    const resolvedEditorPresentation: TaskEditorPresentation = editorPresentation
+        ?? (taskEditorPresentationSetting === 'modal' || taskEditorPresentationSetting === 'side-panel' ? taskEditorPresentationSetting : 'inline');
+    const isModalEditor = resolvedEditorPresentation === 'modal';
+    const isSidePanelEditor = resolvedEditorPresentation === 'side-panel';
+    const isDetachedEditor = isModalEditor || isSidePanelEditor;
     const nativeDateInputLocale = useMemo(() => {
         const systemLocale = typeof navigator !== 'undefined'
             ? String(navigator.languages?.[0] || navigator.language || '').trim()
@@ -545,13 +551,14 @@ export const TaskItem = memo(function TaskItem({
         runAfterTaskEditExit(() => {
             if (!taskRootRef.current?.isConnected) return;
             if (!tryClaimTaskEditSession(task.id, editSessionOwnerRef.current)) return;
+            if (isDetachedEditor) lastFocusedBeforeModalRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
             resetEditState();
             setTaskExpanded(task.id, false);
             setAutoFocusTitle(true);
             setIsEditing(true);
             setEditingTaskId(task.id);
         });
-    }, [effectiveReadOnly, isEditing, resetEditState, setEditingTaskId, setTaskExpanded, task.id]);
+    }, [effectiveReadOnly, isEditing, isDetachedEditor, resetEditState, setEditingTaskId, setTaskExpanded, task.id]);
 
     const handleCreateProject = useCallback(async (title: string) => {
         const trimmed = title.trim();
@@ -715,6 +722,7 @@ export const TaskItem = memo(function TaskItem({
     const renderField = (fieldId: TaskEditorFieldId) => (
         <TaskItemFieldRenderer
             fieldId={fieldId}
+            compactStatus={resolvedEditorPresentation === 'side-panel'}
             task={task}
             draft={draft}
             setField={setField}
@@ -756,11 +764,12 @@ export const TaskItem = memo(function TaskItem({
             // (Focus grouped by tags renders multi-tag tasks once per group);
             // opening a second editor makes them close each other on click.
             if (!tryClaimTaskEditSession(task.id, editSessionOwnerRef.current)) return;
+            if (isDetachedEditor) lastFocusedBeforeModalRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
             setTaskExpanded(task.id, false);
             setAutoFocusTitle(true);
             setIsEditing(true);
         }
-    }, [editingTaskId, effectiveReadOnly, isEditing, setTaskExpanded, task.id]);
+    }, [editingTaskId, effectiveReadOnly, isEditing, isDetachedEditor, setTaskExpanded, task.id]);
 
     useEffect(() => {
         if (!isEditing) return;
@@ -1393,20 +1402,18 @@ export const TaskItem = memo(function TaskItem({
             setIsSavingExit(false);
         }
     }, [finishEditorExit, handleSubmit, isSavingExit, showToast, t]);
-    const taskEditorPresentationSetting = settings?.gtd?.taskEditor?.presentation;
-    const resolvedEditorPresentation: TaskEditorPresentation = editorPresentation
-        ?? (taskEditorPresentationSetting === 'modal' ? 'modal' : 'inline');
-    const isModalEditor = resolvedEditorPresentation === 'modal';
     useEffect(() => {
-        if (!(isEditing && isModalEditor)) {
+        if (!(isEditing && isDetachedEditor)) {
             if (lastFocusedBeforeModalRef.current) {
-                lastFocusedBeforeModalRef.current.focus();
+                const target = lastFocusedBeforeModalRef.current.isConnected
+                    ? lastFocusedBeforeModalRef.current
+                    : taskRootRef.current?.querySelector<HTMLElement>('[data-task-edit-trigger]');
+                target?.focus();
                 lastFocusedBeforeModalRef.current = null;
             }
             return;
         }
 
-        lastFocusedBeforeModalRef.current = document.activeElement as HTMLElement | null;
         const timer = setTimeout(() => {
             const active = document.activeElement as HTMLElement | null;
             if (active && modalEditorRef.current?.contains(active)) {
@@ -1420,13 +1427,13 @@ export const TaskItem = memo(function TaskItem({
             modalEditorRef.current?.focus();
         }, 0);
         return () => clearTimeout(timer);
-    }, [isEditing, isModalEditor]);
+    }, [isEditing, isDetachedEditor]);
     const handleEditorCancel = useCallback(() => requestEditorExit(() => {}), [requestEditorExit]);
     // Clicking outside an untouched inline editor closes it — there is nothing
     // to lose, so no Save/Cancel trip to the bottom of the form. Once any field
     // differs from the task, the editor stays until an explicit Save/Cancel/Esc.
     useEffect(() => {
-        if (!isEditing || isModalEditor) return;
+        if (!isEditing || isDetachedEditor) return;
         const handlePointerDown = (event: PointerEvent) => {
             const target = event.target;
             if (!(target instanceof Node)) return;
@@ -1439,7 +1446,7 @@ export const TaskItem = memo(function TaskItem({
         };
         document.addEventListener('pointerdown', handlePointerDown, true);
         return () => document.removeEventListener('pointerdown', handlePointerDown, true);
-    }, [handleDiscardChanges, hasPendingEdits, isEditing, isModalEditor]);
+    }, [handleDiscardChanges, hasPendingEdits, isEditing, isDetachedEditor]);
     const handleOpenQuickActionMenu = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
         if (selectionMode || isEditing) return;
         event.preventDefault();
@@ -1585,6 +1592,8 @@ export const TaskItem = memo(function TaskItem({
     const renderEditor = () => (
         <TaskItemEditor
             isModalEditor={isModalEditor}
+            isSidePanelEditor={isSidePanelEditor}
+            hasUnsavedChanges={hasPendingEdits()}
             t={t}
             draft={draft}
             setField={setField}
@@ -1734,6 +1743,7 @@ export const TaskItem = memo(function TaskItem({
                     isCondensed ? "px-2.5 py-1.5" : isCompact ? "p-2.5" : "px-3 py-3",
                     "focus-within:ring-2 focus-within:ring-inset focus-within:ring-primary/40 focus-within:bg-primary/5",
                     canCalendarDrag && "cursor-grab active:cursor-grabbing",
+                    isEditing && isSidePanelEditor && "bg-primary/10 ring-1 ring-inset ring-primary/30",
                     isSelected && "ring-2 ring-inset ring-primary/40 bg-primary/5",
                     isHighlighted && "ring-2 ring-inset ring-primary/70 bg-primary/5",
                     // The context menu names no task, so the row it acts on keeps the
@@ -1761,6 +1771,9 @@ export const TaskItem = memo(function TaskItem({
                         editorAriaLabel={tFallback(t, 'taskEdit.editTask', 'Edit task')}
                         isEditing={isEditing}
                         isModalEditor={isModalEditor}
+                        isSidePanelEditor={isSidePanelEditor}
+                        closeLabel={t('common.close')}
+                        breadcrumb={[project?.title, storeSection?.title].filter(Boolean).join(' / ')}
                         modalEditorRef={modalEditorRef}
                         onCancel={handleEditorCancel}
                         renderDisplay={() => (
@@ -1786,8 +1799,8 @@ export const TaskItem = memo(function TaskItem({
                                 showStatusSelect={showConfiguredStatusSelect}
                                 showProjectBadgeInActions={showProjectBadgeInActions}
                                 showProjectBadgeInMetadata={showProjectBadgeInMetadata}
-                                readOnly={effectiveReadOnly}
-                                interactionDisabled={interactionDisabled}
+                                readOnly={effectiveReadOnly || (isEditing && isSidePanelEditor)}
+                                interactionDisabled={interactionDisabled || (isEditing && isSidePanelEditor)}
                                 compactMetaEnabled={compactMetaEnabled}
                                 dense={isDense}
                                 actionsOverlay={actionsOverlay}

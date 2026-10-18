@@ -49,7 +49,10 @@ vi.mock('../../../lib/external-calendar-events', () => ({
 }));
 
 vi.mock('../../TaskItem', () => ({
-    TaskItem: ({ task }: { task: Task }) => <div data-testid={`task-${task.id}`}>{task.title}</div>,
+    TaskItem: ({ task, editorPresentation }: { task: Task; editorPresentation?: string }) => {
+        expect(editorPresentation).toBe('inline');
+        return <div data-testid={`task-${task.id}`}>{task.title}</div>;
+    },
 }));
 
 vi.mock('../InboxProcessor', () => ({

@@ -152,6 +152,7 @@ export type TaskEditorActions = {
 
 type TaskItemFieldRendererProps = {
     fieldId: TaskEditorFieldId;
+    compactStatus?: boolean;
     task: Task;
     draft: TaskDraft;
     setField: TaskDraftSetter;
@@ -165,6 +166,7 @@ type TaskItemFieldRendererProps = {
 
 export function TaskItemFieldRenderer({
     fieldId,
+    compactStatus = false,
     task,
     draft,
     setField,
@@ -1153,6 +1155,7 @@ export function TaskItemFieldRenderer({
         case 'status':
             return (
                 <StatusField
+                    compact={compactStatus}
                     t={t}
                     value={editStatus}
                     onChange={setEditStatus}

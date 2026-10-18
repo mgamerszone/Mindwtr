@@ -1,4 +1,5 @@
 import { usePersistedViewState } from '../hooks/usePersistedViewState';
+import { TaskEditorPanelContext } from '../contexts/task-editor-panel-context';
 import { ViewSidebarContext } from '../contexts/view-sidebar-context';
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import {
@@ -158,6 +159,7 @@ export function Layout({
         if (!bounds || bounds.height <= 0) return;
         setSidebarNavigationHeight(clampSidebarNavigationHeight((event.clientY - bounds.top) / bounds.height * 100));
     };
+    const [taskEditorPanelSlot, setTaskEditorPanelSlot] = useState<HTMLDivElement | null>(null);
     const [viewSidebarSlot, setViewSidebarSlot] = useState<HTMLDivElement | null>(null);
     const hasViewSidebar = (contentView === 'projects' || contentView === 'contexts') && !isCollapsed;
     const isFocusMode = useUiStore((state) => state.isFocusMode);
@@ -805,9 +807,10 @@ export function Layout({
 
 
     return (
+        <TaskEditorPanelContext.Provider value={taskEditorPanelSlot}>
         <ViewSidebarContext.Provider value={viewSidebarSlot}>
         <div className={cn(
-            "flex h-screen overflow-hidden bg-background text-foreground",
+            "relative flex h-screen overflow-hidden bg-background text-foreground",
             sandboxMode && "pt-10",
         )}>
             <SandboxBanner />
@@ -1166,7 +1169,7 @@ export function Layout({
                 // tabIndex=-1 makes this a programmatic focus target for the
                 // "enter list" fallback; it is never keyboard-tabbable, so it
                 // must not paint a focus ring around the whole list (#890).
-                className="flex-1 overflow-auto focus:outline-none"
+                className="min-w-0 flex-1 overflow-auto focus:outline-none"
                 data-main-content
                 tabIndex={-1}
                 role="main"
@@ -1221,8 +1224,10 @@ export function Layout({
                     {children}
                 </div>
             </main>
+            <div ref={setTaskEditorPanelSlot} data-task-editor-panel-slot className="absolute inset-0 z-30 bg-card empty:hidden xl:static xl:w-[min(560px,45vw)] xl:shrink-0" />
             <ToastHost />
         </div>
         </ViewSidebarContext.Provider>
+        </TaskEditorPanelContext.Provider>
     );
 }
