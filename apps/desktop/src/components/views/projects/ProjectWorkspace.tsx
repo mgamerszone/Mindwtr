@@ -28,7 +28,7 @@ import { Attachment,
 import { useDndMonitor } from '@dnd-kit/core';
 import type { DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
-import { CheckCircle2, ChevronDown, ChevronRight, Folder, PanelLeftOpen, Plus, X } from 'lucide-react';
+import { Search, FileText, CheckCircle2, ChevronDown, ChevronRight, Folder, PanelLeftOpen, Plus, X } from 'lucide-react';
 
 import { PromptModal } from '../../PromptModal';
 import { browseForLinkTarget } from '../../../lib/attachment-import';
@@ -1180,7 +1180,7 @@ export function ProjectWorkspace({
         const renderCompletedTasks = selectionMode ? renderSelectableTasks : renderStaticTasks;
 
         return (
-            <div className="rounded-lg border border-border/60 bg-muted/10">
+            <div className="border-b border-border/50">
                 <button
                     type="button"
                     onClick={() => {
@@ -1263,7 +1263,7 @@ export function ProjectWorkspace({
                         }
                         handleToggleSection(group.section);
                     }}
-                    className="flex min-w-0 items-center gap-2 text-sm font-semibold"
+                    className="project-section-title flex min-w-0 items-center gap-3 text-base font-semibold"
                 >
                     {isCollapsed ? (
                         <ChevronRight className="h-4 w-4 flex-none text-muted-foreground" />
@@ -1271,7 +1271,7 @@ export function ProjectWorkspace({
                         <ChevronDown className="h-4 w-4 flex-none text-muted-foreground" />
                     )}
                     <span className="truncate">{group.section.title}</span>
-                    <span className="text-xs text-muted-foreground">{group.tasks.length}</span>
+                    <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">{group.tasks.length}</span>
                 </button>
                 <div className="flex items-center gap-1">
                     {!isArchivedProject && (
@@ -1435,7 +1435,7 @@ export function ProjectWorkspace({
                         id={getSectionContainerId(group.section.id)}
                         className="border-b border-border/40 pb-3"
                     >
-                        <div className="px-1 py-3">
+                        <div className="border-b border-border/50 px-1 py-3">
                             {renderSectionHeader(group, index, 'vertical')}
                         </div>
                         {renderSectionNotes(group.section)}
@@ -1667,7 +1667,7 @@ export function ProjectWorkspace({
             type="button"
             data-add-task-trigger
             onClick={() => openProjectQuickAdd()}
-            className="inline-flex h-8 shrink-0 items-center gap-2 whitespace-nowrap rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            className="inline-flex h-11 shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
         >
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
             {t('projects.addTask')}
@@ -1733,6 +1733,7 @@ export function ProjectWorkspace({
                     </button>
                 )}
                 <div className="relative min-w-0 flex-1">
+                    <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
                         ref={searchInputRef}
                         type="text"
@@ -1743,7 +1744,7 @@ export function ProjectWorkspace({
                         onChange={(event) => setSearchQuery(event.target.value)}
                         className={cn(
                             VIEW_FILTER_INPUT,
-                            'min-w-0',
+                            'min-w-0 pl-10',
                             searchQuery && 'pr-9',
                         )}
                     />
@@ -1764,7 +1765,7 @@ export function ProjectWorkspace({
 
     return (
         <>
-            <div className="flex-1 min-w-0 h-full flex">
+            <div className={cn("project-workspace flex-1 min-w-0 h-full flex", !columnsLayout && "project-workspace--list")}>
                 <div className="flex h-full min-h-0 w-full max-w-none flex-col">
                     {!selectedProject && projectSearch}
                     {selectedProject ? (
@@ -1864,9 +1865,9 @@ export function ProjectWorkspace({
                                 data-project-notes-disclosure
                                 aria-expanded={projectNotesExpanded}
                                 onClick={() => setProjectNotesExpanded((value) => !value)}
-                                className="flex h-10 w-full items-center justify-between border-b border-border/50 px-1 text-left text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                                className="flex h-12 w-full items-center justify-between border-b border-border/50 px-1 text-left text-base font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                             >
-                                <span>{t('project.notes')}</span>
+                                <span className="inline-flex items-center gap-3"><FileText className="h-5 w-5" aria-hidden="true" />{t('project.notes')}</span>
                                 {projectNotesExpanded
                                     ? <ChevronDown className="h-4 w-4" aria-hidden="true" />
                                     : <ChevronRight className="h-4 w-4" aria-hidden="true" />}

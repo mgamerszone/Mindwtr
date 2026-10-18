@@ -1,4 +1,4 @@
-import { ProjectSidebarContext } from '../../contexts/project-sidebar-context';
+import { ViewSidebarContext } from '../../contexts/view-sidebar-context';
 import type { ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -256,13 +256,13 @@ describe('ProjectsView', () => {
     it('moves the project navigator into the shared sidebar and restores its standalone fallback', () => {
         const slot = document.createElement('div');
         document.body.append(slot);
-        const view = render(<ProjectSidebarContext.Provider value={slot}><ProjectsView /></ProjectSidebarContext.Provider>);
+        const view = render(<ViewSidebarContext.Provider value={slot}><ProjectsView /></ViewSidebarContext.Provider>);
         expect(slot.querySelector('[data-testid="projects-sidebar"]')).not.toBeNull();
         expect(view.container.querySelector('[data-testid="projects-sidebar"]')).toBeNull();
         expect(screen.getAllByTestId('projects-sidebar')).toHaveLength(1);
         expect(screen.getByTestId('projects-sidebar-navigation-visible')).toHaveTextContent('true');
         expect(screen.queryByRole('separator')).not.toBeInTheDocument();
-        view.rerender(<ProjectSidebarContext.Provider value={null}><ProjectsView /></ProjectSidebarContext.Provider>);
+        view.rerender(<ViewSidebarContext.Provider value={null}><ProjectsView /></ViewSidebarContext.Provider>);
         expect(slot.children).toHaveLength(0);
         expect(view.container.querySelector('[data-testid="projects-sidebar"]')).not.toBeNull();
         view.unmount();

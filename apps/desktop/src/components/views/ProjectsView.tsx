@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { ProjectSidebarContext } from '../../contexts/project-sidebar-context';
+import { ViewSidebarContext } from '../../contexts/view-sidebar-context';
 import {
     useContext,
     useState,
@@ -207,7 +207,7 @@ export function ProjectsView() {
         DEFAULT_PROJECTS_VIEW_STATE,
         sanitizeProjectsViewState
     );
-    const projectSidebarSlot = useContext(ProjectSidebarContext);
+    const projectSidebarSlot = useContext(ViewSidebarContext);
     const projectsSidebarCollapsed = persistedViewState.projectsSidebarCollapsed;
     const showDeferredProjects = persistedViewState.showDeferredProjects;
     const showArchivedProjects = persistedViewState.showArchivedProjects;

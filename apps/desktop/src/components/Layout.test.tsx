@@ -173,12 +173,15 @@ afterEach(() => {
 });
 
 describe('Layout content width', () => {
-    it('offers a shared project sidebar slot only in the expanded projects layout', () => {
-        const { container, rerender } = renderLayout('projects');
-        expect(container.querySelector('[data-project-sidebar-slot]')).not.toBeNull();
-        expect(container.querySelector('aside')).toHaveClass('w-80');
+    it.each(['projects', 'contexts'])('preserves navigation sections and capture while hosting the %s submenu', (view) => {
+        const { container, rerender, getByRole } = renderLayout(view);
+        expect(container.querySelector('[data-view-sidebar-slot]')).not.toBeNull();
+        expect(container.querySelector('aside')).toHaveClass('w-64');
+        expect(container.querySelectorAll('[data-sidebar-section-toggle]')).toHaveLength(4);
+        expect(getByRole('button', { name: 'More' })).toBeInTheDocument();
+        expect(getByRole('button', { name: 'Add Task (Inbox)' })).toBeInTheDocument();
         rerender(<LanguageProvider><KeybindingProvider currentView="inbox" onNavigate={onNavigate}><Layout currentView="inbox" onViewChange={vi.fn()}><div /></Layout></KeybindingProvider></LanguageProvider>);
-        expect(container.querySelector('[data-project-sidebar-slot]')).toBeNull();
+        expect(container.querySelector('[data-view-sidebar-slot]')).toBeNull();
     });
 
     it('sizes rendered content independently from the requested sidebar view', () => {
