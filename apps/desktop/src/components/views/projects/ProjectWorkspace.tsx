@@ -1899,7 +1899,7 @@ export function ProjectWorkspace({
                                     data-project-task-toolbar
                                     data-compact={projectTaskToolbarCompact ? 'true' : 'false'}
                                     className={cn(
-                                        'sticky top-0 z-20 -mx-2 mb-4 border-y border-border/60 bg-background/95 px-2 shadow-sm backdrop-blur transition-[padding] duration-150 supports-[backdrop-filter]:bg-background/85',
+                                        'sticky top-0 z-20 -mx-2 mb-4 bg-background/95 px-2 shadow-sm backdrop-blur transition-[padding] duration-150 supports-[backdrop-filter]:bg-background/85',
                                         projectTaskToolbarCompact ? 'py-2' : 'py-3',
                                     )}
                                 >
