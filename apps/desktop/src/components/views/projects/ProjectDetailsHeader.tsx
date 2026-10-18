@@ -1,7 +1,7 @@
 import { format } from 'date-fns';
 import { safeParseDate, tFallback, type Project } from '@mindwtr/core';
 import { Calendar, CheckCircle, Copy, FolderOpenDot, FolderPlus, Loader2, MoreHorizontal, RotateCcw, Signal, Trash2, XCircle } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 
 type ProjectProgress = {
@@ -12,6 +12,7 @@ type ProjectProgress = {
 };
 
 type ProjectDetailsHeaderProps = {
+    primaryAction?: ReactNode;
     project: Project;
     projectColor: string;
     areaLabel?: string;
@@ -44,6 +45,7 @@ const MENU_ITEM_CLASS = 'flex w-full items-center gap-2 rounded px-3 py-2 text-l
 // Project management and the full settings grid remain available from the "..." menu
 // without competing with long titles (#1160).
 export function ProjectDetailsHeader({
+    primaryAction,
     project,
     projectColor,
     areaLabel,
@@ -211,7 +213,7 @@ export function ProjectDetailsHeader({
                             rows={1}
                             readOnly={readOnly}
                             aria-readonly={readOnly}
-                            className="project-details-header__titleInput min-w-0 flex-1 resize-none overflow-hidden break-words bg-transparent border-b border-transparent text-xl font-bold leading-tight focus:border-border focus:outline-none read-only:cursor-default read-only:focus:border-transparent"
+                            className="project-details-header__titleInput min-w-0 flex-1 resize-none overflow-hidden break-words bg-transparent border-b border-transparent text-3xl font-semibold tracking-tight leading-tight focus:border-border focus:outline-none read-only:cursor-default read-only:focus:border-transparent"
                             aria-label={t('projects.title')}
                         />
                     </div>
@@ -231,9 +233,7 @@ export function ProjectDetailsHeader({
                     </div>
                 </div>
                 <div className="project-details-header__actions flex flex-none items-center gap-2">
-                    {projectProgress ? (
-                        <span className="whitespace-nowrap text-xs text-muted-foreground">{progressText}</span>
-                    ) : null}
+                    {primaryAction}
                     <button
                         type="button"
                         onClick={onToggleDetails}
@@ -339,6 +339,12 @@ export function ProjectDetailsHeader({
                     </div>
                 </div>
             </div>
+            {projectProgress && (
+                <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                    {projectProgress.total > 0 && <progress aria-label={t('status.done')} value={projectProgress.doneCount} max={projectProgress.total} className="project-progress h-1.5 w-40 overflow-hidden rounded-full" />}
+                    <span>{progressText}</span>
+                </div>
+            )}
         </header>
     );
 }

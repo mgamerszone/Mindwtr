@@ -780,6 +780,15 @@
     color: hsl(var(--destructive));
   }
 
+  .project-progress {
+    appearance: none;
+    border: 0;
+    background: hsl(var(--muted));
+  }
+  .project-progress::-webkit-progress-bar { background: hsl(var(--muted)); }
+  .project-progress::-webkit-progress-value { background: hsl(var(--primary)); }
+  .project-progress::-moz-progress-bar { background: hsl(var(--primary)); }
+
   .project-details-header {
     container-type: inline-size;
   }

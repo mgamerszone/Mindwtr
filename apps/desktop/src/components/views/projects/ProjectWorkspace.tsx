@@ -1412,7 +1412,7 @@ export function ProjectWorkspace({
                 <div className="space-y-3">
                     <SectionDropZone
                         id={NO_SECTION_CONTAINER}
-                        className="min-h-[120px] rounded-lg border border-dashed border-border/70 p-4"
+                        className="min-h-[120px] py-1"
                     >
                         {orderedProjectTasks.length > 0 ? (
                             renderTasks(orderedProjectTasks)
@@ -1433,16 +1433,16 @@ export function ProjectWorkspace({
                     <SectionDropZone
                         key={group.section.id}
                         id={getSectionContainerId(group.section.id)}
-                        className="rounded-lg border border-border/60"
+                        className="border-b border-border/40 pb-3"
                     >
-                        <div className="border-b border-border/50 px-3 py-2">
+                        <div className="px-1 py-3">
                             {renderSectionHeader(group, index, 'vertical')}
                         </div>
                         {renderSectionNotes(group.section)}
                         {!(isArchivedProject
                             ? (archivedSectionCollapsed[group.section.id] ?? group.section.isCollapsed ?? false)
                             : Boolean(group.section.isCollapsed)) && (
-                            <div className="p-3">
+                            <div className="px-1 py-1">
                                 {group.tasks.length > 0 ? (
                                     renderTasks(group.tasks)
                                 ) : (
@@ -1455,9 +1455,9 @@ export function ProjectWorkspace({
                 {showUnsectionedGroup && (
                     <SectionDropZone
                         id={NO_SECTION_CONTAINER}
-                        className="rounded-lg border border-dashed border-border/70"
+                        className="border-b border-border/40 pb-3"
                     >
-                        <div className="flex items-center justify-between border-b border-border/50 px-3 py-2">
+                        <div className="flex items-center justify-between px-1 py-3">
                             <div className="flex items-center gap-2 text-sm font-semibold">
                                 <span>{t('projects.noSection')}</span>
                                 <span className="text-xs text-muted-foreground">
@@ -1465,7 +1465,7 @@ export function ProjectWorkspace({
                                 </span>
                             </div>
                         </div>
-                        <div className="p-3">
+                        <div className="px-1 py-1">
                             {sectionTaskGroups.unsectioned.length > 0 ? (
                                 renderTasks(sectionTaskGroups.unsectioned)
                             ) : (
@@ -1717,52 +1717,56 @@ export function ProjectWorkspace({
         />
     ) : null;
 
+    const projectSearch = (
+        <div className="min-w-0 flex-1">
+            <div data-project-search-row className="flex flex-col gap-2 sm:flex-row">
+                {showProjectsSidebarToggle && (
+                    <button
+                        type="button"
+                        onClick={onToggleProjectsSidebar}
+                        className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                        title={expandProjectsSidebarLabel}
+                        aria-label={expandProjectsSidebarLabel}
+                        aria-expanded={false}
+                    >
+                        <PanelLeftOpen className="h-4 w-4" />
+                    </button>
+                )}
+                <div className="relative min-w-0 flex-1">
+                    <input
+                        ref={searchInputRef}
+                        type="text"
+                        data-view-filter-input
+                        placeholder={t('common.search')}
+                        aria-label={t('common.search')}
+                        value={searchQuery}
+                        onChange={(event) => setSearchQuery(event.target.value)}
+                        className={cn(
+                            VIEW_FILTER_INPUT,
+                            'min-w-0',
+                            searchQuery && 'pr-9',
+                        )}
+                    />
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            onClick={handleClearProjectSearch}
+                            aria-label={clearSearchLabel}
+                            className="absolute right-1.5 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                        >
+                            <X className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <>
             <div className="flex-1 min-w-0 h-full flex">
                 <div className="flex h-full min-h-0 w-full max-w-none flex-col">
-                    <div className="mb-4">
-                        <div data-project-search-row className="flex flex-col gap-2 sm:flex-row">
-                            {showProjectsSidebarToggle && (
-                                <button
-                                    type="button"
-                                    onClick={onToggleProjectsSidebar}
-                                    className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                                    title={expandProjectsSidebarLabel}
-                                    aria-label={expandProjectsSidebarLabel}
-                                    aria-expanded={false}
-                                >
-                                    <PanelLeftOpen className="h-4 w-4" />
-                                </button>
-                            )}
-                            <div className="relative min-w-0 flex-1">
-                                <input
-                                    ref={searchInputRef}
-                                    type="text"
-                                    data-view-filter-input
-                                    placeholder={t('common.search')}
-                                    aria-label={t('common.search')}
-                                    value={searchQuery}
-                                    onChange={(event) => setSearchQuery(event.target.value)}
-                                    className={cn(
-                                        VIEW_FILTER_INPUT,
-                                        'min-w-0',
-                                        searchQuery && 'pr-9',
-                                    )}
-                                />
-                                {searchQuery && (
-                                    <button
-                                        type="button"
-                                        onClick={handleClearProjectSearch}
-                                        aria-label={clearSearchLabel}
-                                        className="absolute right-1.5 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                                    >
-                                        <X className="h-3.5 w-3.5" aria-hidden="true" />
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
+                    {!selectedProject && projectSearch}
                     {selectedProject ? (
                         <div
                             ref={projectScrollRef}
@@ -1775,7 +1779,9 @@ export function ProjectWorkspace({
                                     {tFallback(t, 'common.loading', 'Loading...')}
                                 </div>
                             )}
+                            <div className="mb-5 text-xs text-muted-foreground">{t('projects.title')} <span aria-hidden="true" className="mx-2">/</span> {selectedProject.title}</div>
                             <ProjectDetailsHeader
+                                primaryAction={projectAddTaskButton}
                                 project={selectedProject}
                                 projectColor={getProjectColor(selectedProject, areaById, DEFAULT_AREA_COLOR)}
                                 areaLabel={selectedProjectAreaLabel}
@@ -1901,13 +1907,10 @@ export function ProjectWorkspace({
                                         data-project-task-toolbar-row
                                     >
                                         <div
-                                            className="flex shrink-0 items-center gap-3 whitespace-nowrap"
+                                            className="flex min-w-[160px] flex-1 items-center gap-3"
                                             data-project-task-primary-controls
                                         >
-                                            <span className="text-xs uppercase tracking-wider text-muted-foreground">
-                                                {t('projects.sectionsLabel')}
-                                            </span>
-                                            {projectAddTaskButton}
+                                            {projectSearch}
                                         </div>
                                         <div
                                             className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2"

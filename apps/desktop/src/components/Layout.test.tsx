@@ -173,6 +173,14 @@ afterEach(() => {
 });
 
 describe('Layout content width', () => {
+    it('offers a shared project sidebar slot only in the expanded projects layout', () => {
+        const { container, rerender } = renderLayout('projects');
+        expect(container.querySelector('[data-project-sidebar-slot]')).not.toBeNull();
+        expect(container.querySelector('aside')).toHaveClass('w-80');
+        rerender(<LanguageProvider><KeybindingProvider currentView="inbox" onNavigate={onNavigate}><Layout currentView="inbox" onViewChange={vi.fn()}><div /></Layout></KeybindingProvider></LanguageProvider>);
+        expect(container.querySelector('[data-project-sidebar-slot]')).toBeNull();
+    });
+
     it('sizes rendered content independently from the requested sidebar view', () => {
         const { container, getByRole } = renderLayout('settings', vi.fn(), 'calendar');
         const content = container.querySelector('[data-main-content] > div');
