@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { ViewSidebarContext } from '../../contexts/view-sidebar-context';
 import { useState, useContext, useEffect, useMemo, useCallback, useRef, type DragEvent } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
 import {
     useTaskStore,
     taskMatchesContextOrTagSelection,
@@ -92,6 +92,7 @@ export function ContextsView() {
     const batchUpdateTasks = useTaskStore((state) => state.batchUpdateTasks);
     const restoreTask = useTaskStore((state) => state.restoreTask);
     const { t } = useLanguage();
+    const editingTaskId = useUiStore((state) => state.editingTaskId);
     const {
         showToast,
         showListDetails,
@@ -277,6 +278,16 @@ export function ContextsView() {
     // carry headers, flat rows are the sorted tasks.
     const virtualRowCount = groupedVirtualRows?.length ?? sortedTasks.length;
     const shouldVirtualize = virtualRowCount > LIST_VIRTUALIZATION_THRESHOLD;
+    const editingRowIndices = useMemo(() => {
+        if (!editingTaskId) return [];
+        return groupedVirtualRows
+            ? groupedVirtualRows.flatMap((row, index) => row.kind === 'task' && row.task.id === editingTaskId ? [index] : [])
+            : sortedTasks.flatMap((task, index) => task.id === editingTaskId ? [index] : []);
+    }, [editingTaskId, sortedTasks, groupedVirtualRows]);
+    const rangeExtractor = useCallback((range: Range) => (
+        // Keep the draft owner mounted, including repeated tag/context rows.
+        [...new Set([...defaultRangeExtractor(range), ...editingRowIndices])].sort((a, b) => a - b)
+    ), [editingRowIndices]);
     const rowVirtualizer = useVirtualizer({
         count: shouldVirtualize ? virtualRowCount : 0,
         getScrollElement: () => listScrollRef.current,
@@ -286,6 +297,7 @@ export function ContextsView() {
                 : LIST_VIRTUAL_ROW_ESTIMATE
         ),
         overscan: LIST_VIRTUAL_OVERSCAN_ROWS,
+        rangeExtractor,
         getItemKey: (index) => {
             const row = groupedVirtualRows?.[index];
             if (!row) return sortedTasks[index]?.id ?? index;

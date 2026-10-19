@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useEffect, useState, useRef } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/react-virtual';
 import { ErrorBoundary } from '../ErrorBoundary';
 import { collectBulkTaskTokens, shallow, useTaskStore, filterTasksBySearch, sortTasksBy, tFallback } from '@mindwtr/core';
 import type { BulkOrganizeTaskUpdateInput } from '@mindwtr/core';
@@ -51,6 +51,7 @@ export function SearchView({ savedSearchId, onDelete }: SearchViewProps) {
     );
     const { t } = useLanguage();
     const showToast = useUiStore((state) => state.showToast);
+    const editingTaskId = useUiStore((state) => state.editingTaskId);
     const sortBy = resolveNonDoneTaskSortBy(settings?.taskSortBy, settings);
     const [tagPromptOpen, setTagPromptOpen] = useState(false);
     const [removeTagPickerOpen, setRemoveTagPickerOpen] = useState(false);
@@ -88,11 +89,19 @@ export function SearchView({ savedSearchId, onDelete }: SearchViewProps) {
         );
     }, [tasks, projects, query, sortBy, resolvedAreaFilter, projectMapById, areaById]);
     const shouldVirtualize = filteredTasks.length > LIST_VIRTUALIZATION_THRESHOLD;
+    const editingRowIndices = useMemo(() => (
+        editingTaskId ? filteredTasks.flatMap((task, index) => task.id === editingTaskId ? [index] : []) : []
+    ), [editingTaskId, filteredTasks]);
+    const rangeExtractor = useCallback((range: Range) => (
+        // The row owns the editor draft even when its panel is portaled elsewhere.
+        [...new Set([...defaultRangeExtractor(range), ...editingRowIndices])].sort((a, b) => a - b)
+    ), [editingRowIndices]);
     const rowVirtualizer = useVirtualizer({
         count: shouldVirtualize ? filteredTasks.length : 0,
         getScrollElement: () => listScrollRef.current,
         estimateSize: () => LIST_VIRTUAL_ROW_ESTIMATE,
         overscan: LIST_VIRTUAL_OVERSCAN_ROWS,
+        rangeExtractor,
         getItemKey: (index) => filteredTasks[index]?.id ?? index,
     });
 
